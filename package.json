@@ -1,0 +1,15 @@
+{
+  "name": "fitmate-ai",
+  "version": "1.0.0",
+  "description": "Fitmate AI Chatbot - Fullstack",
+  "scripts": {
+    "install-all": "npm install --prefix frontend && (cd backend && python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt)",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "cd backend && source venv/bin/activate && uvicorn app.main:app --reload --port 8080",
+    "dev": "npx concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:no-turbo": "npx concurrently \"npm run dev:no-turbo --prefix frontend\" \"npm run dev:backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

@@ -6,8 +6,11 @@ class MessageSchema(BaseModel):
     content: str
 
 
+from typing import Optional
+
 class ChatRequest(BaseModel):
     messages: list[MessageSchema]
+    id: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
