@@ -1,0 +1,156 @@
+"use client";
+
+import { motion, AnimatePresence } from "motion/react";
+import { X } from "lucide-react";
+import { MindMap, type MindMapData } from "@/components/mind-map";
+
+interface MindMapOverlayProps {
+  isOpen: boolean;
+  onClose: () => void;
+  data: MindMapData | null;
+  isLoading?: boolean;
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-6">
+      {/* Pulsing central circle */}
+      <motion.div
+        className="w-28 h-28 rounded-full bg-purple-500/10 border border-purple-500/20"
+        animate={{
+          scale: [1, 1.05, 1],
+          opacity: [0.1, 0.2, 0.1],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+      />
+      <motion.p
+        className="text-sm text-white/30 font-medium"
+        animate={{ opacity: [0.2, 0.4, 0.2] }}
+        transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+      >
+        Generating mind map...
+      </motion.p>
+      {/* Orbiting dots */}
+      <div className="relative w-64 h-64 -mt-36">
+        {[0, 1, 2, 3, 4, 5].map((i) => (
+          <motion.div
+            key={i}
+            className="absolute w-2.5 h-2.5 rounded-full"
+            style={{
+              backgroundColor: [
+                "#f97066",
+                "#22d3ee",
+                "#fbbf24",
+                "#34d399",
+                "#f472b6",
+                "#818cf8",
+              ][i],
+              left: "50%",
+              top: "50%",
+            }}
+            animate={{
+              x: [
+                Math.cos((i / 6) * Math.PI * 2) * 80,
+                Math.cos((i / 6) * Math.PI * 2 + Math.PI) * 80,
+                Math.cos((i / 6) * Math.PI * 2) * 80,
+              ],
+              y: [
+                Math.sin((i / 6) * Math.PI * 2) * 80,
+                Math.sin((i / 6) * Math.PI * 2 + Math.PI) * 80,
+                Math.sin((i / 6) * Math.PI * 2) * 80,
+              ],
+              opacity: [0.12, 0.18, 0.12],
+            }}
+            transition={{
+              duration: 4,
+              repeat: Infinity,
+              ease: "linear",
+              delay: i * 0.2,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+export function MindMapOverlay({
+  isOpen,
+  onClose,
+  data,
+  isLoading = false,
+}: MindMapOverlayProps) {
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <motion.div
+          className="fixed inset-0 z-[100] flex items-center justify-center"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
+        >
+          {/* Backdrop */}
+          <motion.div
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+          />
+
+          {/* Content container */}
+          <motion.div
+            className="relative z-10 w-[95vw] h-[90vh] max-w-7xl rounded-[40px] border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-2xl shadow-2xl overflow-hidden"
+            initial={{ scale: 0.9, opacity: 0, y: 20 }}
+            animate={{ scale: 1, opacity: 1, y: 0 }}
+            exit={{ scale: 0.9, opacity: 0, y: 20 }}
+            transition={{
+              type: "spring",
+              stiffness: 300,
+              damping: 25,
+            }}
+          >
+            {/* Header */}
+            <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-10 py-8 bg-gradient-to-b from-[#0a0a0a] to-transparent">
+              <motion.h2
+                className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]"
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                Mind Map
+              </motion.h2>
+              <motion.button
+                className="p-2.5 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 cursor-pointer transition-all"
+                onClick={onClose}
+                whileHover={{ scale: 1.1, rotate: 90 }}
+                whileTap={{ scale: 0.9 }}
+                initial={{ opacity: 0, x: 10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <X size={20} />
+              </motion.button>
+            </div>
+
+            {/* Mind map content */}
+            <div className="w-full h-full overflow-hidden">
+              {isLoading ? (
+                <div className="w-full h-full flex items-center justify-center">
+                  <LoadingSkeleton />
+                </div>
+              ) : data ? (
+                <MindMap data={data} />
+              ) : null}
+            </div>
+          </motion.div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
