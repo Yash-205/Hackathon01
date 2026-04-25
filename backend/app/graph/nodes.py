@@ -28,15 +28,39 @@ else:
         streaming=True,
     )
 
+from app.db import db, get_db
+from langchain_core.runnables import RunnableConfig
+
+@tool
+async def search_documents(query: str, config: RunnableConfig) -> str:
+    """Search the user's uploaded study materials and notes."""
+    user_id = config.get("configurable", {}).get("user_id")
+    if not user_id:
+        return "Error: User not authenticated."
+
+    try:
+        # Search for documents belonging to this user
+        db = await get_db()
+        # Ensure we ONLY find documents for the current user
+        cursor = db.documents.find({"user_id": user_id}).sort("created_at", -1).limit(5)
+        docs = await cursor.to_list(length=5)
+        
+        if not docs:
+            return "No documents found for this user. Ask user to upload materials."
+        
+        context = "Information found in your uploaded documents:\n\n"
+        for doc in docs:
+            content = doc["content"]
+            if len(content) > 1500:
+                content = content[:1500] + "..."
+            context += f"--- {doc['filename']} ---\n{content}\n\n"
+            
+        return context
+    except Exception as e:
+        return f"Error searching documents: {str(e)}"
+
 @tool
 def generate_mindmap_tool(text: str) -> str:
-    """Generate a structured mind map from the given text content.
-    Returns a JSON string with a central_topic and an array of 3-8 nodes,
-    each with id, label, detail, and color."""
-    return "Mind map generated successfully. The user can now see it in the UI."
+    """Generate a structured mind map to visualize a complex topic."""
+    return "MIND_MAP_TRIGGERED"
 
-def chatbot_node(state: dict) -> dict:
-    """Process the current messages through the LLM and return the response."""
-    messages = state["messages"]
-    response = llm.invoke(messages)
-    return {"messages": [response]}

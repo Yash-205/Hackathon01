@@ -1,5 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
+
+// Polyfill Buffer and process for client-side libraries that expect them
+if (typeof window !== "undefined") {
+  if (!window.Buffer) {
+    const { Buffer } = require("buffer");
+    window.Buffer = Buffer;
+  }
+  if (!window.process) {
+    window.process = require("process");
+  }
+}
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/providers/theme-provider";

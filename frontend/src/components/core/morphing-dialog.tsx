@@ -276,7 +276,6 @@ function MorphingDialogTitle({
       layoutId={`dialog-title-container-${uniqueId}`}
       className={className}
       style={style}
-      layout
     >
       {children}
     </motion.div>

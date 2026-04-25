@@ -1,7 +1,9 @@
 "use client";
 
-import { MessageSquare, Plus, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { MessageSquare, Plus, PanelLeftClose, LogIn } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { isAuthenticated } from "@/lib/auth";
+import Link from "next/link";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -20,6 +22,8 @@ export function Sidebar({
   onSelectChat,
   onNewChat,
 }: SidebarProps) {
+  const authed = isAuthenticated();
+
   return (
     <>
       {/* Mobile Overlay */}
@@ -40,6 +44,7 @@ export function Sidebar({
         <div className="flex items-center justify-between p-4 border-b border-white/5 min-w-64">
           <button
             onClick={onNewChat}
+            data-testid="new-chat-button"
             className="flex-1 flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-white/5 hover:bg-white/10 rounded-lg transition-colors border border-white/5"
           >
             <Plus className="h-4 w-4" />
@@ -57,25 +62,42 @@ export function Sidebar({
           <div className="text-xs font-semibold text-white/30 uppercase tracking-wider mb-3 px-2">
             Recent
           </div>
-          {chats.map((chat) => (
-            <button
-              key={chat.id}
-              onClick={() => onSelectChat(chat.id)}
-              className={cn(
-                "w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors group text-left truncate",
-                currentChatId === chat.id
-                  ? "bg-white/10 text-white"
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
-              )}
-            >
-              <MessageSquare className="h-4 w-4 shrink-0 opacity-70 group-hover:opacity-100" />
-              <span className="truncate">{chat.title}</span>
-            </button>
-          ))}
-          {chats.length === 0 && (
-            <div className="text-center text-sm text-white/30 py-4">
-              No chats yet
+          
+          {!authed ? (
+            <div className="flex flex-col items-center justify-center h-48 px-4 text-center">
+              <div className="w-10 h-10 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 text-purple-300 border border-purple-500/30 shadow-2xl shadow-purple-500/20">
+                <LogIn className="h-5 w-5" />
+              </div>
+              <p className="text-sm text-white/50 mb-4">Sign in to save your chat history</p>
+              <Link href="/login" className="w-full">
+                <button className="w-full py-2 bg-purple-600 text-white rounded-lg text-sm font-bold hover:bg-purple-500 transition-all shadow-lg shadow-purple-500/10">
+                  Sign In
+                </button>
+              </Link>
             </div>
+          ) : (
+            <>
+              {chats.map((chat) => (
+                <button
+                  key={chat.id}
+                  onClick={() => onSelectChat(chat.id)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2.5 text-sm rounded-lg transition-colors group text-left truncate",
+                    currentChatId === chat.id
+                      ? "bg-white/10 text-white"
+                      : "text-white/60 hover:bg-white/5 hover:text-white"
+                  )}
+                >
+                  <MessageSquare className="h-4 w-4 shrink-0 opacity-70 group-hover:opacity-100" />
+                  <span className="truncate">{chat.title}</span>
+                </button>
+              ))}
+              {chats.length === 0 && (
+                <div className="text-center text-sm text-white/30 py-4">
+                  No chats yet
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

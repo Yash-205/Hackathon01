@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "motion/react";
-import { X } from "lucide-react";
+import { X, Brain } from "lucide-react";
 import { MindMap, type MindMapData } from "@/components/mind-map";
 
 interface MindMapOverlayProps {
@@ -14,19 +14,21 @@ interface MindMapOverlayProps {
 function LoadingSkeleton() {
   return (
     <div className="flex flex-col items-center justify-center gap-6">
-      {/* Pulsing central circle */}
+      {/* Pulsing central icon */}
       <motion.div
-        className="w-28 h-28 rounded-full bg-purple-500/10 border border-purple-500/20"
+        className="w-28 h-28 rounded-3xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center shadow-2xl shadow-purple-500/10"
         animate={{
           scale: [1, 1.05, 1],
-          opacity: [0.1, 0.2, 0.1],
+          opacity: [0.3, 0.6, 0.3],
         }}
         transition={{
           duration: 2,
           repeat: Infinity,
           ease: "easeInOut",
         }}
-      />
+      >
+        <Brain className="text-purple-400 h-12 w-12" />
+      </motion.div>
       <motion.p
         className="text-sm text-white/30 font-medium"
         animate={{ opacity: [0.2, 0.4, 0.2] }}
@@ -127,6 +129,7 @@ export function MindMapOverlay({
               </motion.h2>
               <motion.button
                 className="p-2.5 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 cursor-pointer transition-all"
+                data-testid="close-mind-map"
                 onClick={onClose}
                 whileHover={{ scale: 1.1, rotate: 90 }}
                 whileTap={{ scale: 0.9 }}
@@ -141,7 +144,10 @@ export function MindMapOverlay({
             {/* Mind map content */}
             <div className="w-full h-full overflow-hidden">
               {isLoading ? (
-                <div className="w-full h-full flex items-center justify-center">
+                <div 
+                  className="w-full h-full flex items-center justify-center"
+                  data-testid="mind-map-loader"
+                >
                   <LoadingSkeleton />
                 </div>
               ) : data ? (

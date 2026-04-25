@@ -1,17 +1,8 @@
 "use client";
 
 import React, { useMemo, useEffect, useRef, useState } from "react";
-import { motion } from "motion/react";
-import {
-  MorphingDialog,
-  MorphingDialogTrigger,
-  MorphingDialogContainer,
-  MorphingDialogContent,
-  MorphingDialogTitle,
-  MorphingDialogDescription,
-  MorphingDialogClose,
-} from "@/components/core/morphing-dialog";
-import { X } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { X, Info } from "lucide-react";
 
 export interface MindMapNode {
   id: string;
@@ -78,12 +69,63 @@ function layoutHorizontalTree(
   return positionedNodes;
 }
 
-function SphericalNode({ node }: { node: PositionedNode }) {
+function NodeModal({ node, onClose }: { node: PositionedNode; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-black/60 backdrop-blur-md"
+      />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        role="dialog"
+        aria-modal="true"
+        data-testid="node-modal"
+        className="relative w-full max-w-md bg-[#0a0a0a] border border-white/10 rounded-[32px] overflow-hidden shadow-2xl p-8"
+      >
+        <button
+          onClick={onClose}
+          className="absolute top-6 right-6 p-2 rounded-full bg-white/5 text-white/50 hover:text-white transition-colors"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div className="flex items-center gap-4 mb-6">
+          <div
+            className="w-4 h-4 rounded-full"
+            style={{ backgroundColor: node.color, boxShadow: `0 0 15px ${node.color}` }}
+          />
+          <h3 className="text-xl font-bold text-white uppercase tracking-tight">
+            {node.label}
+          </h3>
+        </div>
+
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-white/30 text-[10px] font-bold uppercase tracking-[0.2em]">
+            <Info className="h-3 w-3" />
+            Description
+          </div>
+          <p className="text-white/60 leading-relaxed text-sm">
+            {node.detail}
+          </p>
+        </div>
+      </motion.div>
+    </div>
+  );
+}
+
+function SphericalNode({ node, onClick }: { node: PositionedNode; onClick: () => void }) {
   const size = node.isRoot ? ROOT_SIZE : NODE_SIZE;
 
   return (
     <div
       className="absolute z-10"
+      data-node-label={node.label}
       style={{
         left: node.x - size / 2,
         top: node.y - size / 2,
@@ -91,52 +133,25 @@ function SphericalNode({ node }: { node: PositionedNode }) {
         height: size,
       }}
     >
-      <MorphingDialog
-        transition={{
-          type: "tween",
-          ease: "easeOut",
-          duration: 0.2,
+      <motion.button
+        onClick={onClick}
+        data-testid="mind-map-node"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        className="w-full h-full rounded-full overflow-hidden border border-white/10 bg-[#0a0a0a] hover:bg-white/5 transition-all cursor-pointer relative flex flex-col items-center justify-center p-4 text-center group"
+        style={{
+          backgroundColor: `${node.color}15`,
+          borderColor: `${node.color}30`,
         }}
       >
-        <MorphingDialogTrigger className="w-full h-full rounded-full">
-          <div
-            className="relative w-full h-full rounded-full flex flex-col items-center justify-center p-4 text-center border backdrop-blur-xl cursor-pointer overflow-hidden"
-            style={{
-              backgroundColor: `${node.color}20`,
-              borderColor: `${node.color}50`,
-              boxShadow: `0 0 20px ${node.color}15`,
-            }}
-          >
-            <div 
-              className="absolute inset-0 rounded-full opacity-10 blur-xl -z-10"
-              style={{ backgroundColor: node.color }}
-            />
-            <span className="relative z-10 text-[10px] font-black text-white uppercase tracking-tighter leading-[1.2] w-full px-1">
-              {node.label}
-            </span>
-          </div>
-        </MorphingDialogTrigger>
-
-        <MorphingDialogContainer>
-          <MorphingDialogContent className="relative w-[90vw] max-w-md rounded-3xl border border-white/10 bg-[#0a0a0a] p-8 shadow-2xl">
-            <div className="flex items-center gap-4 mb-4">
-              <div
-                className="w-8 h-8 rounded-full border"
-                style={{ backgroundColor: `${node.color}20`, borderColor: node.color }}
-              />
-              <MorphingDialogTitle className="text-lg font-bold text-white uppercase">
-                {node.label}
-              </MorphingDialogTitle>
-            </div>
-            <MorphingDialogDescription className="text-sm text-white/60 leading-relaxed" disableLayoutAnimation>
-              {node.detail}
-            </MorphingDialogDescription>
-            <MorphingDialogClose className="absolute top-4 right-4 text-white/40 hover:text-white">
-              <X size={18} />
-            </MorphingDialogClose>
-          </MorphingDialogContent>
-        </MorphingDialogContainer>
-      </MorphingDialog>
+        <div 
+          className="absolute inset-0 rounded-full opacity-10 blur-xl -z-10 group-hover:opacity-20 transition-opacity"
+          style={{ backgroundColor: node.color }}
+        />
+        <span className="text-[10px] font-black text-white uppercase tracking-tighter leading-none w-full px-1">
+          {node.label}
+        </span>
+      </motion.button>
     </div>
   );
 }
@@ -144,12 +159,13 @@ function SphericalNode({ node }: { node: PositionedNode }) {
 export function MindMap({ data }: MindMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [selectedNode, setSelectedNode] = useState<PositionedNode | null>(null);
 
   const positionedNodes = useMemo(() => {
     const root: MindMapNode = {
       id: "root",
       label: data.central_topic,
-      detail: "Core Theme.",
+      detail: "Core Theme of the discussion.",
       color: "#8b5cf6",
       children: data.nodes
     };
@@ -190,7 +206,17 @@ export function MindMap({ data }: MindMapProps) {
   }, [bounds]);
 
   return (
-    <div ref={containerRef} className="w-full h-full overflow-hidden flex items-center justify-center bg-[#030303] relative">
+    <div 
+      ref={containerRef} 
+      data-testid="mind-map-container"
+      className="w-full h-full overflow-hidden flex items-center justify-center bg-[#030303] relative"
+    >
+      <AnimatePresence>
+        {selectedNode && (
+          <NodeModal node={selectedNode} onClose={() => setSelectedNode(null)} />
+        )}
+      </AnimatePresence>
+
       <motion.div 
         className="relative flex items-center justify-center z-10"
         animate={{ scale }}
@@ -219,6 +245,7 @@ export function MindMap({ data }: MindMapProps) {
             <SphericalNode 
               key={node.id} 
               node={node} 
+              onClick={() => setSelectedNode(node)}
             />
           ))}
         </div>
