@@ -1,10 +1,11 @@
-from fastapi import FastAPI, Request # type: ignore
+from fastapi import FastAPI, Request, Depends, HTTPException # type: ignore
+import json
 from fastapi.middleware.cors import CORSMiddleware # type: ignore
 from fastapi.responses import JSONResponse # type: ignore
 from app.routes.chat import router as chat_router
-from app.routes.auth import router as auth_router
-from app.routes.mindmap import router as mindmap_router
 from app.routes.threads import router as threads_router
+from app.routes.mindmap import router as mindmap_router
+from app.routes.auth import router as auth_router, get_current_user
 from app.routes.documents import router as documents_router
 
 app = FastAPI(title="Chatbot API", version="1.0.0")
@@ -52,7 +53,30 @@ async def cleanup_database():
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
+from app.routes.chat import _get_chat_response
+from app.models.chat import ChatRequest, MessageSchema
+from fastapi import UploadFile
+
+@app.post("/api/chat-fix")
+async def chat_fix(request: Request, current_user: dict = Depends(get_current_user)):
+    content_type = request.headers.get("Content-Type", "")
+    if "multipart/form-data" in content_type:
+        form_data = await request.form()
+        messages_json = json.loads(form_data.get("messages", "[]"))
+        messages = [MessageSchema(**msg) for msg in messages_json]
+        thread_id = form_data.get("id", "default_thread")
+        files = [v for k, v in form_data.items() if isinstance(v, UploadFile)]
+    else:
+        body = await request.json()
+        req_model = ChatRequest(**body)
+        messages = req_model.messages
+        thread_id = req_model.id or "default_thread"
+        files = []
+
+    response_data = await _get_chat_response(messages, thread_id, str(current_user["_id"]), files)
+    return JSONResponse(content=response_data)
+
+
 @app.get("/health")
 async def health():
-    return {"status": "ok", "version": "1.0.1"} # Incremented version to verify reload
-# Backend reloaded for testing
+    return {"status": "ok", "version": "1.0.2"} # Force reload

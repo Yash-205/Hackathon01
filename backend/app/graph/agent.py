@@ -40,7 +40,11 @@ def build_graph():
     async def chatbot(state: MessagesState):
         # Prepend SystemMessage to give context
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + state["messages"]
-        response = await llm_with_tools.ainvoke(messages)
+        try:
+            response = await llm_with_tools.ainvoke(messages)
+        except Exception as e:
+            print(f"Tool call failed, falling back to text: {e}")
+            response = await llm.ainvoke(messages)
         return {"messages": [response]}
 
     async def summarize_conversation(state: MessagesState):

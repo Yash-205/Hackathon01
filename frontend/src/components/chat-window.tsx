@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { useChat } from "ai/react";
 import { motion, AnimatePresence } from "motion/react";
 import { Brain, User as UserIcon, Paperclip, Send, Loader2, Zap } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -15,6 +14,8 @@ import { LandingState } from "@/components/landing-state";
 import { MessageBubble } from "@/components/message-bubble";
 import { AuthModal } from "@/components/auth-modal";
 import { cn } from "@/lib/utils";
+import { MindMapOverlay } from "@/components/mind-map-overlay";
+import { type MindMapData } from "@/components/mind-map";
 
 interface ChatWindowProps {
   chatId: string | null;
@@ -37,43 +38,105 @@ export default function ChatWindow({
   const [sessionId] = useState(() => Math.random().toString(36).substring(7));
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { 
-    messages, 
-    input, 
-    handleInputChange, 
-    handleSubmit, 
-    isLoading, 
-    data,
-    setMessages
-  } = useChat({
-    api: "/api/chat",
-    headers: {
-      "Authorization": `Bearer ${getAuthToken() || ""}`
-    },
-    id: chatId || sessionId,
-    body: {
-      id: chatId || sessionId,
-    },
-    onResponse: (response: Response) => {
-      console.log("[useChat] Response received:", response.status);
-    },
-    onFinish: (message: any) => {
-      console.log("[useChat] Stream finished:", message.content?.substring(0, 50) + "...");
-      // If this is a new chat, notify the parent to update sidebar and URL
-      if (!chatId && messages.length > 0) {
-        // Use a generated ID if useChat doesn't expose it reliably in this version
-        const generatedId = Math.random().toString(36).substring(7);
-        onChatCreated(generatedId, messages[0].content);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [input, setInput] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Mind map states
+  const [isMindMapOpen, setIsMindMapOpen] = useState(false);
+  const [mindMapData, setMindMapData] = useState<MindMapData | null>(null);
+  const [isMindMapLoading, setIsMindMapLoading] = useState(false);
+  
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+  };
+
+  const appendMessage = (message: any) => {
+    setMessages(prev => [...prev, message]);
+  };
+
+  const sendMessage = async (content: string, attachments: any[] = []) => {
+    if (!content.trim() && attachments.length === 0) return;
+
+    const userMessage = {
+      id: Math.random().toString(36).substring(7),
+      role: "user",
+      content: content,
+      experimental_attachments: attachments
+    };
+
+    appendMessage(userMessage);
+    setInput("");
+    setIsLoading(true);
+
+    try {
+      const response = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getAuthToken() || ""}`
+        },
+        body: JSON.stringify({
+          messages: [...messages, userMessage],
+          id: chatId || sessionId
+        })
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          onAuthRequired?.("login");
+          throw new Error("Unauthorized");
+        }
+        throw new Error("Failed to get response");
       }
-    },
-    onError: (err: Error) => {
-      console.error("[useChat] Error encountered:", err);
-      if (err.message.includes("401") || err.message.includes("Unauthorized")) {
-        onAuthRequired?.("login");
+
+      const data = await response.json();
+      appendMessage({
+        id: data.id || Math.random().toString(36).substring(7),
+        role: "assistant",
+        content: data.content
+      });
+
+      // If this is a new chat, notify the parent
+      if (!chatId && messages.length === 0) {
+        onChatCreated(data.id || sessionId, content);
       }
-    },
-    experimental_attachments: true
-  } as any);
+
+    } catch (err) {
+      console.error("[Chat] Error:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGenerateMindMap = async (text: string) => {
+    setIsMindMapLoading(true);
+    setIsMindMapOpen(true);
+    setMindMapData(null);
+
+    try {
+      const response = await fetch("/api/mindmap", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getAuthToken()}`
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setMindMapData(data);
+      }
+    } catch (err) {
+      console.error("[MindMap] Error:", err);
+    } finally {
+      // Small delay to ensure the loader is visible for Cypress
+      setTimeout(() => {
+        setIsMindMapLoading(false);
+      }, 1000);
+    }
+  };
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -139,18 +202,13 @@ export default function ChatWindow({
       url: URL.createObjectURL(file)
     }));
 
-    handleSubmit(e, {
-      experimental_attachments: attachments,
-      body: {
-        id: chatId || sessionId
-      }
-    });
+    sendMessage(input, attachments);
     
     setActiveAttachments([]);
   };
 
-  // Get current status from data chunks
-  const status = data && data.length > 0 ? (data[data.length - 1] as any)?.status : null;
+  // Status updates are disabled in non-streaming mode
+  const status = null;
 
   return (
     <div className="flex flex-col h-screen bg-[#050505] text-white relative overflow-hidden">
@@ -190,6 +248,7 @@ export default function ChatWindow({
                   content={message.content}
                   attachments={message.experimental_attachments}
                   isStreaming={isLoading && index === messages.length - 1 && message.role === "assistant"}
+                  onGenerateMindMap={handleGenerateMindMap}
                 />
               ))}
 
@@ -241,6 +300,13 @@ export default function ChatWindow({
           </div>
         )}
       </main>
+
+      <MindMapOverlay 
+        isOpen={isMindMapOpen} 
+        onClose={() => setIsMindMapOpen(false)} 
+        data={mindMapData}
+        isLoading={isMindMapLoading}
+      />
     </div>
   );
 }

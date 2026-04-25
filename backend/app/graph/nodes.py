@@ -25,7 +25,7 @@ else:
     llm = ChatGroq(
         model=MODEL_NAME,
         api_key=GROQ_API_KEY,
-        streaming=True,
+        streaming=False,
     )
 
 from app.db import db, get_db

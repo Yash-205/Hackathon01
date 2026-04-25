@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080'}/api/chat`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8080'}/api/chat`, {
       method: "POST",
       headers,
       body: requestBody,
@@ -35,20 +35,42 @@ export async function POST(req: NextRequest) {
 
     console.log(`[PROXY] Backend responded with status: ${response.status}`);
 
-    if (!response.ok || !response.body) {
-      const errorData = await response.json().catch(() => ({}));
-      console.error("[PROXY] Backend Error Data:", errorData);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ error: "Unknown backend error" }));
+      console.error("[PROXY] Backend Error:", errorData);
       return Response.json(errorData, { status: response.status });
     }
 
-    return new Response(response.body, {
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache",
-        "Connection": "keep-alive",
-        "X-Vercel-AI-Data-Stream": "v1",
-      },
-    });
+    const text = await response.text();
+
+    // Handle the legacy 0: streaming format if detected
+    if (text.includes("\n0:") || text.startsWith("0:") || text.startsWith("2:")) {
+      const content = text.split('\n')
+        .filter(line => line.startsWith('0:'))
+        .map(line => {
+          try {
+            return JSON.parse(line.substring(2));
+          } catch (e) {
+            return "";
+          }
+        })
+        .join('');
+      
+      return Response.json({
+        id: "legacy_stream_" + Date.now(),
+        role: "assistant",
+        content: content || "Response received but could not be parsed."
+      });
+    }
+
+    // Otherwise, try to parse as regular JSON
+    try {
+      const data = JSON.parse(text);
+      return Response.json(data);
+    } catch (e) {
+      console.error("[PROXY] Failed to parse backend response as JSON:", e);
+      return Response.json({ error: "Invalid response from backend" }, { status: 500 });
+    }
   } catch (error) {
     console.error("[PROXY] Fetch Error:", error);
     return Response.json({ error: "Failed to connect to backend" }, { status: 500 });

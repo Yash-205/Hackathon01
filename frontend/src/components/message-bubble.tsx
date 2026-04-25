@@ -16,55 +16,23 @@ interface MessageBubbleProps {
   content: string;
   isStreaming?: boolean;
   attachments?: any[];
+  onGenerateMindMap?: (content: string) => void;
 }
 
-export function MessageBubble({ role, content, isStreaming, attachments }: MessageBubbleProps) {
+export function MessageBubble({ 
+  role, 
+  content, 
+  isStreaming, 
+  attachments,
+  onGenerateMindMap 
+}: MessageBubbleProps) {
   const isUser = role === "user";
-  const [mindMapOpen, setMindMapOpen] = useState(false);
-  const [mindMapData, setMindMapData] = useState<MindMapData | null>(null);
-  const [mindMapLoading, setMindMapLoading] = useState(false);
 
   const showMindMapButton = !isUser && !isStreaming && content.length > 100;
 
-  const handleGenerateMindMap = async () => {
-    setMindMapOpen(true);
-    setMindMapLoading(true);
-    setMindMapData(null);
-
-    try {
-      const token = getAuthToken();
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080"}/api/mindmap`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token || ""}`,
-          },
-          body: JSON.stringify({ text: content }),
-        }
-      );
-
-      if (!res.ok) throw new Error("Failed to generate mind map");
-
-      const data = await res.json();
-      setMindMapData(data);
-    } catch (err) {
-      console.error("Mind map generation failed:", err);
-      // Show a fallback mind map
-      setMindMapData({
-        central_topic: "Error",
-        nodes: [
-          {
-            id: "1",
-            label: "Generation Failed",
-            detail: "Could not generate the mind map. Please try again.",
-            color: "#f97066",
-          },
-        ],
-      });
-    } finally {
-      setMindMapLoading(false);
+  const handleGenerateMindMap = () => {
+    if (onGenerateMindMap) {
+      onGenerateMindMap(content);
     }
   };
 
@@ -103,7 +71,7 @@ export function MessageBubble({ role, content, isStreaming, attachments }: Messa
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
                 components={{
-                  p: ({ children }) => <p className="mb-4 last:mb-0 whitespace-pre-wrap break-words">{children}</p>,
+                  p: ({ children }) => <div className="mb-4 last:mb-0 whitespace-pre-wrap break-words">{children}</div>,
                   code({ node, inline, className, children, ...props }: any) {
                     const match = /language-(\w+)/.exec(className || "");
                     return !inline ? (
@@ -151,19 +119,14 @@ export function MessageBubble({ role, content, isStreaming, attachments }: Messa
             <motion.button
               className="self-start flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/50 hover:text-white/80 hover:bg-white/10 hover:border-purple-500/30 cursor-pointer backdrop-blur-sm mt-2"
               onClick={handleGenerateMindMap}
-              disabled={mindMapLoading}
               initial={{ opacity: 0, y: 5 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.5, type: "spring", stiffness: 300, damping: 20 }}
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
-              id="generate-mindmap-button"
+              data-testid="generate-mindmap-button"
             >
-              {mindMapLoading ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <Sparkles className="h-3 w-3" />
-              )}
+              <Sparkles className="h-3 w-3" />
               Generate Mind Map
             </motion.button>
           )}
@@ -195,13 +158,6 @@ export function MessageBubble({ role, content, isStreaming, attachments }: Messa
         </div>
       </div>
 
-      {/* Mind Map Overlay */}
-      <MindMapOverlay
-        isOpen={mindMapOpen}
-        onClose={() => setMindMapOpen(false)}
-        data={mindMapData}
-        isLoading={mindMapLoading}
-      />
     </>
   );
 }

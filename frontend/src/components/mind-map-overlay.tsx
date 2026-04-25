@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from "motion/react";
 import { X, Brain } from "lucide-react";
 import { MindMap, type MindMapData } from "@/components/mind-map";
+import { cn } from "@/lib/utils";
 
 interface MindMapOverlayProps {
   isOpen: boolean;
@@ -87,76 +88,53 @@ export function MindMapOverlay({
   isLoading = false,
 }: MindMapOverlayProps) {
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-        >
-          {/* Backdrop */}
-          <motion.div
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-          />
-
-          {/* Content container */}
-          <motion.div
-            className="relative z-10 w-[95vw] h-[90vh] max-w-7xl rounded-[40px] border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-2xl shadow-2xl overflow-hidden"
-            initial={{ scale: 0.9, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{
-              type: "spring",
-              stiffness: 300,
-              damping: 25,
-            }}
-          >
-            {/* Header */}
-            <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-10 py-8 bg-gradient-to-b from-[#0a0a0a] to-transparent">
-              <motion.h2
-                className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]"
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                Mind Map
-              </motion.h2>
-              <motion.button
-                className="p-2.5 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 cursor-pointer transition-all"
-                data-testid="close-mind-map"
-                onClick={onClose}
-                whileHover={{ scale: 1.1, rotate: 90 }}
-                whileTap={{ scale: 0.9 }}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <X size={20} />
-              </motion.button>
-            </div>
-
-            {/* Mind map content */}
-            <div className="w-full h-full overflow-hidden">
-              {isLoading ? (
-                <div 
-                  className="w-full h-full flex items-center justify-center"
-                  data-testid="mind-map-loader"
-                >
-                  <LoadingSkeleton />
-                </div>
-              ) : data ? (
-                <MindMap data={data} />
-              ) : null}
-            </div>
-          </motion.div>
-        </motion.div>
+    <div 
+      className={cn(
+        "fixed inset-0 z-[100] flex items-center justify-center transition-opacity duration-200",
+        isOpen ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
       )}
-    </AnimatePresence>
+      data-testid="mind-map-overlay"
+    >
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/80 backdrop-blur-md"
+        onClick={onClose}
+      />
+
+      {/* Content container */}
+      <div className={cn(
+        "relative z-10 w-[95vw] h-[90vh] max-w-7xl rounded-[40px] border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-2xl shadow-2xl overflow-hidden transition-transform duration-300",
+        isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-10"
+      )}>
+        {/* Header */}
+        <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-10 py-8 bg-gradient-to-b from-[#0a0a0a] to-transparent">
+          <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">
+            Mind Map
+          </h2>
+          <button
+            className="p-2.5 rounded-full bg-white/5 border border-white/10 text-white/50 hover:text-white hover:bg-white/10 cursor-pointer transition-all"
+            data-testid="close-mind-map"
+            onClick={onClose}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Mind map content */}
+        <div className="w-full h-full overflow-hidden">
+          {isLoading && (
+            <div
+              className="w-full h-full flex items-center justify-center bg-[#0a0a0a]"
+              data-testid="mind-map-loader"
+            >
+              <LoadingSkeleton />
+            </div>
+          )}
+          {!isLoading && data && (
+            <MindMap data={data} />
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
