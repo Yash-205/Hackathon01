@@ -196,6 +196,7 @@ export function AuthModal({ isOpen, onClose, initialMode = "login" }: AuthModalP
 
                 <Button
                   type="submit"
+                  data-testid="auth-submit-button"
                   disabled={isLoading}
                   className="w-full h-14 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-2xl transition-all shadow-2xl shadow-purple-500/40 disabled:opacity-50 mt-4 group"
                 >

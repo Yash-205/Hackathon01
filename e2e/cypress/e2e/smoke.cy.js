@@ -16,8 +16,8 @@ describe('Smoke Test', () => {
   it('should have a working sidebar toggle', () => {
     // Check if sidebar is closed initially (depending on layout, it might be open on desktop)
     // Looking at Sidebar component, it uses isOpen prop
-    cy.get('button').filter(':has(svg)').first().click(); // Assuming first icon button is toggle
+    cy.get('[data-testid="sidebar-toggle"]').click();
     // Alternatively, look for specific text in sidebar
-    cy.contains('New Chat').should('be.visible');
+    cy.get('[data-testid="new-chat-button"]').should('be.visible');
   });
 });

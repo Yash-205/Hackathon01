@@ -33,7 +33,7 @@ describe('Authentication Flow', () => {
     cy.contains('Login').click();
     cy.get('input[type="email"]').type('nonexistent@example.com');
     cy.get('input[type="password"]').type('wrongpassword');
-    cy.get('button[type="submit"]').click();
+    cy.get('[data-testid="auth-submit-button"]').click();
     
     // We expect an error message to appear
     cy.get('.text-red-400').should('be.visible');

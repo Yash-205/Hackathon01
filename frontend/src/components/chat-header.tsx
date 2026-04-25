@@ -22,6 +22,7 @@ export function ChatHeader({ isSidebarOpen, onToggleSidebar, onAuthRequired, onN
     <div className="flex items-center gap-4 px-6 py-6 md:px-12 bg-transparent sticky top-0 z-20">
       {!isSidebarOpen && onToggleSidebar && (
         <button 
+          data-testid="sidebar-toggle"
           onClick={onToggleSidebar}
           className="p-2.5 -ml-2 text-white/50 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl transition-all border border-white/10 backdrop-blur-md"
         >

@@ -102,10 +102,14 @@ export function MindMapOverlay({
       />
 
       {/* Content container */}
-      <div className={cn(
-        "relative z-10 w-[95vw] h-[90vh] max-w-7xl rounded-[40px] border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-2xl shadow-2xl overflow-hidden transition-transform duration-300",
-        isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-10"
-      )}>
+      <div 
+        role="dialog"
+        aria-modal="true"
+        className={cn(
+          "relative z-10 w-[95vw] h-[90vh] max-w-7xl rounded-[40px] border border-white/10 bg-[#0a0a0a]/90 backdrop-blur-2xl shadow-2xl overflow-hidden transition-transform duration-300",
+          isOpen ? "scale-100 translate-y-0" : "scale-95 translate-y-10"
+        )}
+      >
         {/* Header */}
         <div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between px-10 py-8 bg-gradient-to-b from-[#0a0a0a] to-transparent">
           <h2 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">

@@ -39,6 +39,7 @@ export function MessageBubble({
   return (
     <>
       <div
+        data-testid="message-bubble"
         className={cn(
           "flex items-start gap-4 animate-in fade-in slide-in-from-bottom-2 duration-300",
           isUser ? "flex-row-reverse" : "flex-row"

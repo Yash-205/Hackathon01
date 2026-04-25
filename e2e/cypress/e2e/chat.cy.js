@@ -19,6 +19,34 @@ describe('Chat Interface', () => {
       body: { message: 'Upload successful' }
     }).as('uploadDoc');
 
+    cy.intercept('POST', '/api/threads', {
+      statusCode: 200,
+      body: { message: 'Thread saved' }
+    }).as('postThreads');
+
+    cy.intercept('POST', '/api/mindmap', {
+      statusCode: 200,
+      body: {
+        central_topic: "Quantum Physics",
+        nodes: [
+          {
+            id: "1",
+            label: "Wave-Particle Duality",
+            detail: "The concept that every elementary particle or quantic entity may be partly described in terms not only of particles, but also of waves.",
+            color: "#A78BFA",
+            children: []
+          },
+          {
+            id: "2",
+            label: "Schrödinger's Cat",
+            detail: "A thought experiment that illustrates a paradox of quantum superposition.",
+            color: "#A78BFA",
+            children: []
+          }
+        ]
+      }
+    }).as('postMindmap');
+
     // Simulate being logged in
     cy.window().then((win) => {
       win.localStorage.setItem('auth_token', 'fake-token');
@@ -34,13 +62,13 @@ describe('Chat Interface', () => {
     cy.get('[data-testid="chat-input-button"]').click();
 
     // Check if user message is displayed
-    cy.contains(userMessage).should('be.visible');
+    cy.get('[data-testid="message-bubble"]').contains(userMessage).should('be.visible');
 
     // Wait for AI response
     cy.wait('@postChat');
     
     // Check if AI response is displayed
-    cy.contains('Hello! I am your AI assistant.').should('be.visible');
+    cy.get('[data-testid="message-bubble"]').contains('Quantum physics is a fundamental theory').should('be.visible');
   });
 
   it('should trigger mind map generation', () => {
@@ -54,8 +82,11 @@ describe('Chat Interface', () => {
     // Look for the "Mind Map" button in the assistant message
     cy.get('[data-testid="generate-mindmap-button"]').click();
 
+    cy.wait('@postMindmap');
+
     // Check if mind map overlay appears
     cy.get('[role="dialog"]').should('be.visible');
+    cy.contains('Quantum Physics').should('be.visible');
   });
 
   it('should upload a file', () => {
