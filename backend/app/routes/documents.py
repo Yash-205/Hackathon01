@@ -4,12 +4,14 @@ from app.db import get_db
 from app.agents.document_processor import DocumentProcessor
 from datetime import datetime
 from bson import ObjectId
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from app.vector_store import add_documents_to_vector_store
 
 router = APIRouter(prefix="/api/documents", tags=["documents"])
 processor = DocumentProcessor()
 
 async def _process_file(file: UploadFile, user_id: str):
-    """Internal helper to process a file and store it in MongoDB."""
+    """Internal helper to process a file and store it in MongoDB and ChromaDB."""
     contents = await file.read()
     if len(contents) > 10 * 1024 * 1024:
         raise Exception("File too large (max 10MB)")
@@ -30,7 +32,17 @@ async def _process_file(file: UploadFile, user_id: str):
         }
         
         db = await get_db()
-        await db.documents.insert_one(doc_record)
+        result = await db.documents.insert_one(doc_record)
+        doc_id = str(result.inserted_id)
+        
+        # Split text into chunks
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
+        text_chunks = text_splitter.split_text(processed_data["text"])
+
+        # Store chunks in Vector Store
+        metadatas = [{"user_id": user_id, "filename": file.filename, "doc_id": doc_id} for _ in text_chunks]
+        add_documents_to_vector_store(text_chunks, metadatas)
+
         return doc_record
     except Exception as e:
         raise Exception(f"Failed to process document: {str(e)}")

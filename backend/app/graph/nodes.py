@@ -30,6 +30,7 @@ else:
 
 from app.db import db, get_db
 from langchain_core.runnables import RunnableConfig
+from app.vector_store import search_vector_store
 
 @tool
 async def search_documents(query: str, config: RunnableConfig) -> str:
@@ -39,21 +40,19 @@ async def search_documents(query: str, config: RunnableConfig) -> str:
         return "Error: User not authenticated."
 
     try:
-        # Search for documents belonging to this user
-        db = await get_db()
-        # Ensure we ONLY find documents for the current user
-        cursor = db.documents.find({"user_id": user_id}).sort("created_at", -1).limit(5)
-        docs = await cursor.to_list(length=5)
+        # Search vector store for relevant chunks
+        results = search_vector_store(query=query, user_id=user_id, k=3)
         
-        if not docs:
+        if not results:
             return "No documents found for this user. Ask user to upload materials."
         
         context = "Information found in your uploaded documents:\n\n"
-        for doc in docs:
-            content = doc["content"]
+        for doc in results:
+            content = doc.page_content
+            filename = doc.metadata.get("filename", "Unknown Document")
             if len(content) > 1500:
                 content = content[:1500] + "..."
-            context += f"--- {doc['filename']} ---\n{content}\n\n"
+            context += f"--- {filename} ---\n{content}\n\n"
             
         return context
     except Exception as e:

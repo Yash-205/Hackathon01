@@ -40,16 +40,27 @@ app.include_router(documents_router)
 
 from app.db import get_db
 from bson import ObjectId
+from app.vector_store import client as qdrant_client, COLLECTION_NAME, VectorParams, Distance
 
 @app.post("/api/testing/cleanup")
 async def cleanup_database():
     db = await get_db()
     try:
+        # Clear MongoDB
         await db.users.delete_many({})
         await db.threads.delete_many({})
         await db.messages.delete_many({})
         await db.documents.delete_many({})
-        return {"message": "Database cleaned successfully"}
+        
+        # Clear Qdrant Vector Store
+        if qdrant_client.collection_exists(COLLECTION_NAME):
+            qdrant_client.delete_collection(collection_name=COLLECTION_NAME)
+            qdrant_client.create_collection(
+                collection_name=COLLECTION_NAME,
+                vectors_config=VectorParams(size=384, distance=Distance.COSINE),
+            )
+            
+        return {"message": "Database and Vector Store cleaned successfully"}
     except Exception as e:
         return JSONResponse(status_code=500, content={"detail": str(e)})
 
